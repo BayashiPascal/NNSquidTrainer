@@ -19,11 +19,11 @@
 #define NB_INPUT 10
 #define NB_OUTPUT 1
 // Nb max of hidden values, links and base functions
-#define NB_HIDDEN_LAYERS 2
-#define NB_NODE_PER_HIDDEN_LAYER ((NB_INPUT + NB_OUTPUT) * 3)
-#define NB_HIDDEN (NB_HIDDEN_LAYERS * NB_NODE_PER_HIDDEN_LAYER)
+#define NB_MAXHIDDEN 100  // 1
+#define NB_MAXLINK 200  // 100
+#define NB_MAXBASE NB_MAXLINK
 // Size of the gene pool and elite pool
-#define ADN_SIZE_POOL 200
+#define ADN_SIZE_POOL 500
 #define ADN_SIZE_ELITE 20
 // Initial best value during learning, must be lower than any
 // possible value returned by Evaluate()
@@ -36,6 +36,8 @@
 #define COMPACT true
 // Time limit for one evaluation to complete on a Squidlet, in second
 #define MAXWAIT 60
+// Nb of Neuranet evaluated per task
+#define BATCHSIZE 50
 
 typedef enum DataSetCat {
   datalearn,
@@ -49,26 +51,15 @@ const char* dataSetCatNames[datasetCatSize] = {
 
 // Create an empty NeuraNet with the desired architecture
 NeuraNet* CreateNN(void) {
-
-  // Create the hidden layers definition
-  VecLong* hiddenLayers = VecLongCreate(NB_HIDDEN_LAYERS);
-  for (int iLayer = NB_HIDDEN_LAYERS; iLayer--;) {
-    VecSet(
-      hiddenLayers, 
-      iLayer, 
-      NB_NODE_PER_HIDDEN_LAYER);
-  }
-
   // Create the NeuraNet
+  int nbIn = NB_INPUT;
+  int nbOut = NB_OUTPUT;
+  int nbMaxHid = NB_MAXHIDDEN;
+  int nbMaxLink = NB_MAXLINK;
+  int nbMaxBase = NB_MAXBASE;
   NeuraNet* nn = 
-    NeuraNetCreateFullyConnected(
-      NB_INPUT, 
-      NB_OUTPUT, 
-      hiddenLayers);
+    NeuraNetCreate(nbIn, nbOut, nbMaxHid, nbMaxBase, nbMaxLink);
 
-  // Free memory
-  VecFree(&hiddenLayers);
-  
   // Return the NeuraNet
   return nn;
 }
@@ -234,8 +225,8 @@ void Learn(
       printf("Previous GenAlg reloaded.\n");
       if (GABestAdnF(ga) != NULL)
         NNSetBases(nn, GABestAdnF(ga));
-      //if (GABestAdnI(ga) != NULL)
-      //  NNSetLinks(nn, GABestAdnI(ga));
+      if (GABestAdnI(ga) != NULL)
+        NNSetLinks(nn, GABestAdnI(ga));
 
       GDataSetVecFloat dataset = GDataSetVecFloatCreateStaticFromFile(
         pathData);
@@ -272,7 +263,7 @@ void Learn(
     NNSetGABoundsBases(nn, ga);
     NNSetGABoundsLinks(nn, ga);
     // Must be declared as a GenAlg applied to a NeuraNet
-    GASetTypeNeuraNet(ga, NB_INPUT, NB_HIDDEN, NB_OUTPUT);
+    GASetTypeNeuraNet(ga, NB_INPUT, NB_MAXHIDDEN, NB_OUTPUT);
     GAInit(ga);
 
   }
@@ -356,8 +347,8 @@ void Learn(
       // to this adn
       if (GABestAdnF(ga) != NULL)
         NNSetBases(nn, GAAdnAdnF(adn));
-      //if (GABestAdnI(ga) != NULL)
-      //  NNSetLinks(nn, GAAdnAdnI(adn));
+      if (GABestAdnI(ga) != NULL)
+        NNSetLinks(nn, GAAdnAdnI(adn));
 
       // Save the NeuraNet
       char nnFilename[100];
@@ -366,19 +357,32 @@ void Learn(
       FILE* fp = fopen(pathNN, "w");
       NNSave(nn, fp, true);
       fclose(fp);
+      free(pathNN);
+    }
       
+    // For each adn in the GenAlg
+    int cat = 0;
+    for (int iEnt = 0; iEnt < GAGetNbAdns(ga); iEnt += BATCHSIZE) {
+      
+      VecLong* ids = VecLongCreate(
+        MIN(GAGetNbAdns(ga), iEnt + BATCHSIZE) - iEnt);
+      for (int jEnt = iEnt; 
+        jEnt < MIN(GAGetNbAdns(ga), iEnt + BATCHSIZE);
+        ++jEnt) {
+        VecSet(ids, jEnt - iEnt, jEnt);
+      }
       // Add the task to the Squad
-      int cat = 0;
+      GenAlgAdn* adn = GAAdn(ga, iEnt);
       SquadAddTask_EvalNeuraNet(
         squad, 
         GAAdnGetId(adn), 
         MAXWAIT, 
         pathData, 
-        pathNN, 
-        iEnt, 
+        pathWorkingDir, 
+        ids, 
         curBest, 
         cat);
-      free(pathNN);
+      VecFree(&ids);
 
     }
 
@@ -401,24 +405,40 @@ void Learn(
 
           JSONNode* json = JSONCreate();
           JSONLoadFromStr(json, task->_bufferResult);
-          JSONNode* propId = JSONProperty(json, "nnid");
+          JSONNode* propIds = JSONProperty(json, "nnids");
           JSONNode* propVal = JSONProperty(json, "v");
-          float value = atof(JSONLblVal(propVal));
-          int nnid = atoi(JSONLblVal(propId));
-          JSONFree(&json);
+          VecLong* nnids = NULL;
+          VecDecodeAsJSON(&nnids, propIds);
+          VecFloat* vals = NULL;
+          VecDecodeAsJSON(&vals, propVal);
 
-          // Update the value of this adn
-          GenAlgAdn* adn = GAAdn(ga, nnid);
-          GASetAdnValue(ga, adn, value);
+          for (int iEnt = 0; iEnt < VecGetDim(nnids); ++iEnt) {
+            unsigned long nnid = VecGet(nnids, iEnt);
+            float value = VecGet(vals, iEnt);
+            GenAlgAdn* adn = GAAdn(ga, nnid);
+            GASetAdnValue(ga, adn, value);
+            // Update the best value in the current epoch
+            if (value > curBest) {
+              curBest = value;
+              curBestI = nnid;
+              ageBest = GAAdnGetAge(adn);
+            }
+            if (value < curWorst)
+              curWorst = value;
 
-          // Update the best value in the current epoch
-          if (value > curBest) {
-            curBest = value;
-            curBestI = nnid;
-            ageBest = GAAdnGetAge(adn);
+            char nnFilename[100];
+            sprintf(nnFilename, "nn%ld.json", nnid);
+            char* pathNN = PBFSJoinPath(pathWorkingDir, nnFilename);
+            char cmd[1000];
+            sprintf(cmd, "rm -f %s", pathNN);
+            int retCmd = system(cmd);
+            (void)retCmd;
+            free(pathNN);
           }
-          if (value < curWorst)
-            curWorst = value;
+          JSONFree(&json);
+          VecFree(&nnids);
+          VecFree(&vals);
+
 
         }
 
@@ -454,8 +474,8 @@ void Learn(
       GenAlgAdn* bestAdn = GAAdn(ga, curBestI);
       if (GAAdnAdnF(bestAdn) != NULL)
         NNSetBases(nn, GAAdnAdnF(bestAdn));
-      //if (GAAdnAdnI(bestAdn) != NULL)
-      //  NNSetLinks(nn, GAAdnAdnI(bestAdn));
+      if (GAAdnAdnI(bestAdn) != NULL)
+        NNSetLinks(nn, GAAdnAdnI(bestAdn));
 
       // Save the best NeuraNet
       fd = fopen("./bestnn.txt", "w");
