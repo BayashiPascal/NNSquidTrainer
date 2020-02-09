@@ -31,4 +31,4 @@ convData:
 	main -convData ./Prototask.data ./dataset.json
 
 learn:
-	rm -f bestnn.txt WorkingDir/*; main -squidlets ./squidlets.json -learn /home/bayashi/GitHub/NNSquidTrainer/Abalone/dataset.json /home/bayashi/GitHub/NNSquidTrainer/Abalone/WorkingDir | tee learn.txt
+	rm -f bestnn.txt WorkingDir/*; main -epoch 100 -squidlets ./squidlets.json -learn /home/bayashi/GitHub/NNSquidTrainer/Abalone/dataset.json /home/bayashi/GitHub/NNSquidTrainer/Abalone/WorkingDir | tee learn.txt

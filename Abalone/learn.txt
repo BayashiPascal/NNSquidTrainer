@@ -1,19 +1,14 @@
 Creating new GenAlg...
 Learning...
-Will stop when curEpoch >= 1000 or bestVal >= -0.010000
+Will stop when curEpoch >= 100 or bestVal >= -0.010000
 Will save the best NeuraNet in ./bestnn.txt at each improvement
-Improvement at epoch 00000: -2.395002(184) (in 00:00:00:02s)       
-Improvement at epoch 00002: -2.047647(400) (in 00:00:00:05s)       
-Improvement at epoch 00003: -1.944196(487) (in 00:00:00:06s)       
-Improvement at epoch 00004: -1.916182(392) (in 00:00:00:08s)       
-Improvement at epoch 00005: -1.879269(407) (in 00:00:00:10s)       
-Improvement at epoch 00011: -1.878767(323) (in 00:00:00:21s)       
-Improvement at epoch 00012: -1.870231(268) (in 00:00:00:22s)       
-Improvement at epoch 00014: -1.841572(180) (in 00:00:00:26s)       
-Improvement at epoch 00015: -1.784674(336) (in 00:00:00:29s)       
-Improvement at epoch 00016: -1.772910(102) (in 00:00:00:31s)       
-Improvement at epoch 00019: -1.771542(283) (in 00:00:00:37s)       
-Improvement at epoch 00020: -1.754290(084) (in 00:00:00:40s)       
-Improvement at epoch 00022: -1.739240(236) (in 00:00:00:44s)       
-Improvement at epoch 00023: -1.734074(358) (in 00:00:00:47s)       
-Improvement at epoch 00057: -1.729788(099) (in 00:00:02:30s)       
+Improvement at epoch 00000: -2.000414(061) (in 00:00:00:03s)       
+Improvement at epoch 00002: -1.854552(336) (in 00:00:00:07s)       
+Improvement at epoch 00003: -1.831585(188) (in 00:00:00:09s)       
+Improvement at epoch 00004: -1.828024(428) (in 00:00:00:10s)       
+Improvement at epoch 00005: -1.811789(262) (in 00:00:00:12s)       
+Improvement at epoch 00022: -1.810649(494) (in 00:00:00:46s)       
+Improvement at epoch 00036: -1.809680(123) (in 00:00:01:15s)       
+Improvement at epoch 00037: -1.799758(112) (in 00:00:01:17s)       
+
+Learning complete (in 0:0:3:44s)

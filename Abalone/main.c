@@ -205,7 +205,7 @@ void Learn(
     }
     fclose(fp);
   }
-  //SquadSetFlagTextOMeter(squad, true);
+  SquadSetFlagTextOMeter(squad, true);
 
   // Create the GenAlg used for learning
   // If previous weights are available in "./bestga.txt" reload them
@@ -577,10 +577,10 @@ int main(
       printf("configuration file\n");
       printf("-learn <path dataset> <path working dir> : learn from ");
       printf("the dataset located at <path dataset> and use the folder ");
-      printf("<path working dir> for temporary files during learning");
+      printf("<path working dir> for temporary files during learning\n");
       printf("[-epoch <limit epoch>] : max number of epoch during ");
-      printf("learning");
-      printf("[-val <limit value>] : max value during learning");
+      printf("learning\n");
+      printf("[-val <limit value>] : max value during learning\n");
       return 0;
 
     } else if (strcmp(argv[iArg], "-squidlets") == 0 && 
